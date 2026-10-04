@@ -1,0 +1,2291 @@
+local Airflow = loadstring(game:HttpGet("https://raw.githubusercontent.com/Twistzzmassivescripts/UI_Libarys/refs/heads/main/OUTLAWS.dev/NEW%20ONE%20PEAK.lua"))()
+Airflow:LoadFont({Name = "ValleySans"})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local UserInput = game:GetService("UserInputService")
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+local TeleportService = game:GetService("TeleportService")
+local VirtualInput = game:GetService("VirtualInputManager")
+local GuiService = game:GetService("GuiService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+local S = {}
+S.Run = RunService
+S.World = Workspace
+S.RS = ReplicatedStorage
+S.Cam = Camera
+S.LP = LocalPlayer
+
+S.Reach = {
+    Normal = false,
+    Better = false,
+    ShowBox = false,
+    Distance = 15,
+    BoxFollowCam = false,
+    TouchRate = 0.02,
+}
+
+S.Limbs = {
+    Legs = false,
+    Arms = false,
+    LegTrans = 0.5,
+    LegSize = 2,
+    ArmTrans = 0.5,
+    ArmSize = 2,
+}
+
+S.Player = {
+    InfStamina = false,
+    NoCooldown = false,
+}
+
+S.Ball = {
+    ShotPower = false,
+    ShotMult = 1,
+    Highlight = false,
+    TP = false,
+    AutoOwner = false,
+}
+
+S.Aim = {
+    Red = false,
+    Blue = false,
+    Speed = 100,
+    Smooth = false,
+    SmoothAlpha = 0.15,
+    Curve = false,
+    CurveAmount = 0.3,
+    Predict = false,
+    PredictScale = 1.0,
+    AutoShoot = false,
+    AutoShootRange = 20,
+}
+
+S.SizeFilter = {
+    HeadSize = true,
+    TorsoSize = true,
+    RightArmSize = true,
+    LeftArmSize = true,
+    RightLegSize = true,
+    LeftLegSize = true,
+    HeadTransparency = true,
+    TorsoTransparency = true,
+    RightArmTransparency = true,
+    LeftArmTransparency = true,
+    RightLegTransparency = true,
+    LeftLegTransparency = true,
+    Swimming = true,
+    Tool = true,
+}
+
+S.OrigSize = {}
+S.OrigTrans = {}
+S.Tracked = {}
+S.TrackedList = {}
+S.TrackMap = {}
+S.TouchCooldown = {}
+S.GameActive = true
+S.LastActivity = 0.2
+S.BallLimit = 3
+S.GlobalTick = 0
+S.TouchStep = 0.1
+S.Touching = false
+S.CachedBall = nil
+S.HeldTool = ""
+S.ActionKeys = {"G","E","Q","R","X","Z","C","V","MouseButton1"}
+S.SavedActions = {}
+S.KickActions = {
+    Shoot = true, Volley = true, Header = true, SideHeader = true,
+    BicycleKick = true, DivingHeader = true, ScorpionKick = true,
+    DivingVolley = true, Long = true, LeftChip = true, RightChip = true,
+    WhippedLeftCross = true, WhippedRightCross = true, LiftUpCombo = true,
+    Chip = true, Rabona = true, HighRabona = true, Pass = true,
+    Short = true, ShortPass = true, GroundPass = true, Through = true,
+    ThroughBall = true,
+}
+
+S.BallControl = {
+    Active = false,
+    Gui = nil,
+    BV = nil,
+    OriginalSubject = nil,
+    Speed = 500,
+}
+
+S.GKFolder = Instance.new("Folder")
+S.GKFolder.Name = "GK"
+
+S.BallUtil = {
+    Trajectory = false,
+    TrajParts = nil,
+    Freeze = false,
+    FreezeUntil = 0,
+    FreezeAnchor = nil,
+    Magnet = false,
+    MagnetRadius = 30,
+    MagnetForce = 2500,
+    MagnetBV = nil,
+    Spin = false,
+    SpinVec = Vector3.new(0, 100, 0),
+    SizeOverride = false,
+    SizeMult = 1,
+}
+
+S.Movement = {
+    Noclip = false,
+    Fly = false,
+    FlySpeed = 50,
+    FlyBV = nil,
+    SpeedOn = false,
+    Speed = 23,
+    JumpOn = false,
+    JumpPower = 50,
+    HipOn = false,
+    Hip = 2,
+    AntiFling = false,
+    AutoRejoin = false,
+}
+
+S.Camera = {
+    FovOn = false,
+    Fov = 70,
+    Freecam = false,
+    FreecamPart = nil,
+    FreecamSpeed = 50,
+    LockBall = false,
+    LockOriginal = nil,
+    ZoomOn = false,
+    Zoom = 20,
+}
+
+S.Visual = {
+    Fullbright = false,
+    SavedBrightness = nil,
+    SavedAmbient = nil,
+    SavedOutdoor = nil,
+    BallBox = false,
+    BallBoxGui = nil,
+    BallBoxColor = Color3.fromRGB(0, 255, 130),
+    PlayerESP = false,
+    PlayerESPGui = nil,
+    Tracer = false,
+    TracerColor = Color3.fromRGB(255, 255, 0),
+    TeamHighlight = false,
+    TeamHighlights = {},
+    NightVision = false,
+    NightVisionEffect = nil,
+    NoFog = false,
+    SavedFogEnd = nil,
+    EspOnlyOppPoss = false,
+}
+
+S.Possession = {
+    Owner = nil,
+    OwnerName = "None",
+    LastTouch = nil,
+    Track = false,
+    Gui = nil,
+}
+
+S.Votekick = {
+    Enabled = false,
+    BlockFire = true,
+    HideUI = true,
+    StaffSpoof = false,
+    Log = {},
+    LogEnabled = false,
+    TallySpoof = false,
+    UiConns = {},
+    Hooked = false,
+}
+
+local function scanCharacter(character)
+    table.clear(S.OrigSize)
+    table.clear(S.OrigTrans)
+    table.clear(S.Tracked)
+    table.clear(S.TrackMap)
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            S.OrigSize[part] = part.Size
+            S.OrigTrans[part] = part.Transparency
+        else
+            local isJoint = part:IsA("Weld") or part:IsA("Motor6D") or part:IsA("WeldConstraint")
+            if isJoint then
+                table.insert(S.TrackMap, part)
+            end
+        end
+    end
+end
+
+if S.LP.Character then
+    task.spawn(scanCharacter, S.LP.Character)
+end
+
+S.LP.CharacterAdded:Connect(function(character)
+    S.TouchCooldown = {}
+    S.Touching = false
+    task.wait(0.6)
+    scanCharacter(character)
+end)
+
+local function registerBall(ball)
+    if ball and ball:IsA("BasePart") and not S.Tracked[ball] then
+        S.Tracked[ball] = true
+        table.insert(S.TrackedList, ball)
+    end
+end
+
+local function unregisterBall(ball)
+    if not ball then return end
+    S.Tracked[ball] = nil
+    local idx = table.find(S.TrackedList, ball)
+    if idx then
+        table.remove(S.TrackedList, idx)
+    end
+end
+
+for _, ball in ipairs(CollectionService:GetTagged("Ball")) do
+    registerBall(ball)
+end
+
+CollectionService:GetInstanceAddedSignal("Ball"):Connect(registerBall)
+CollectionService:GetInstanceRemovedSignal("Ball"):Connect(unregisterBall)
+
+local function refreshBallList()
+    local balls = S.World:FindFirstChild("Balls") or S.World:FindFirstChild("balls")
+    if not balls then return end
+    for _, ball in ipairs(balls:GetChildren()) do
+        registerBall(ball)
+    end
+end
+
+local function checkGameState()
+    local active = false
+    local startGui = S.LP.PlayerGui:FindFirstChild("Start")
+    if startGui and startGui.Visible then
+        active = true
+    end
+    local balls = workspace:FindFirstChild("Balls")
+    if balls and #balls:GetChildren() > 0 then
+        active = true
+    end
+    if not S.LP.Parent then
+        active = false
+    end
+    S.GameActive = active
+    if not active then
+        for _, ball in ipairs(S.TrackedList) do
+            if ball and ball:IsA("BasePart") then
+                pcall(function()
+                    if ball.Parent then
+                        local original = ball:GetAttribute("OriginalPosition")
+                        if original then
+                            ball.Position = original
+                        end
+                    end
+                end)
+            end
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        checkGameState()
+        if S.Reach.Better or S.Reach.Normal then
+            refreshBallList()
+        end
+    end
+end)
+
+local function readHeldTool()
+    local character = S.LP.Character
+    if not character then return "" end
+    local current = S.LP:FindFirstChild("CurrentTool")
+    if current then return current.Name end
+    local rightHand = character:FindFirstChild("RightHand")
+    if rightHand then
+        for _, item in ipairs(rightHand:GetChildren()) do
+            if item:IsA("Tool") then return item.Name end
+        end
+    end
+    return ""
+end
+
+task.spawn(function()
+    while task.wait(0.3) do
+        S.HeldTool = readHeldTool()
+    end
+end)
+
+local hitbox = Instance.new("Part")
+hitbox.Name = "ReachHitbox"
+hitbox.Anchored = true
+hitbox.CanCollide = false
+hitbox.Material = Enum.Material.ForceField
+hitbox.Transparency = 0.7
+hitbox.Color = Color3.fromRGB(255, 50, 50)
+hitbox.Shape = Enum.PartType.Block
+hitbox.CastShadow = false
+hitbox.Size = Vector3.new(S.Reach.Distance * 2, S.Reach.Distance * 2, S.Reach.Distance * 2)
+S.ReachHitbox = hitbox
+
+S.NamecallOriginal = nil
+S.NamecallOriginal = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = {...}
+    local method = getnamecallmethod()
+
+    if not checkcaller() then
+        if S.Votekick.Enabled and S.Votekick.BlockFire then
+            if method == "FireServer" and typeof(self) == "Instance" then
+                local ok, name = pcall(function() return self.Name end)
+                if ok and (name == "Votekick" or name == "VoteKick" or name == "votekick") then
+                    if S.Votekick.LogEnabled then
+                        table.insert(S.Votekick.Log, {
+                            t = os.clock(),
+                            dir = "block",
+                            name = name,
+                            args = tostring(args[1]),
+                            trace = debug.traceback("", 2),
+                        })
+                    end
+                    return
+                end
+            end
+        end
+
+        if S.Votekick.Enabled and S.Votekick.LogEnabled and not S.Votekick.BlockFire then
+            if method == "FireServer" and typeof(self) == "Instance" then
+                local ok, name = pcall(function() return self.Name end)
+                if ok and (name == "Votekick" or name == "VoteKick" or name == "votekick") then
+                    table.insert(S.Votekick.Log, {
+                        t = os.clock(),
+                        dir = "pass",
+                        name = name,
+                        args = tostring(args[1]),
+                    })
+                end
+            end
+        end
+
+        if S.Votekick.Enabled and S.Votekick.TallySpoof then
+            if (method == "GetAttribute" or method == "getAttribute") and typeof(self) == "Instance" then
+                local key = args[1]
+                if key == "VoteCount" or key == "Votes" or key == "Tally" then
+                    return 0
+                end
+            end
+        end
+
+        if S.Votekick.Enabled and S.Votekick.StaffSpoof then
+            if (method == "GetAttribute" or method == "getAttribute") and typeof(self) == "Instance" then
+                if self == S.LP and args[1] == "IsStaff" then
+                    return true
+                end
+            end
+        end
+
+        local reachActive = S.Reach.Better or S.Reach.Normal
+        if reachActive and (method == "GetAttribute" or method == "getAttribute") then
+            if args[1] == "Owner" and typeof(self) == "Instance" then
+                local name = self.Name
+                if name == "Ball" or name == "Football" or name == "TPS_Ball" then
+                    return "BypassUser"
+                end
+            end
+        elseif method == "FireServer" and typeof(self) == "Instance" then
+            local name = self.Name
+            if name == "Physics" or name == "Client" then
+                local arg1 = args[1]
+                if type(arg1) == "string" and S.SizeFilter[arg1] then
+                    return
+                end
+            end
+        end
+    end
+    return S.NamecallOriginal(self, ...)
+end)
+
+S.IndexOriginal = nil
+S.IndexOriginal = hookmetamethod(game, "__index", function(self, key)
+    if not checkcaller() then
+        if S.BallUtil.SizeOverride and S.Tracked[self] and key == "Size" then
+            local orig = S.OrigSize[self] or S.IndexOriginal(self, key)
+            return orig * S.BallUtil.SizeMult
+        end
+
+        if S.Reach.Better and S.GameActive and key == "Position" and S.Tracked[self] then
+            local character = S.LP.Character
+            if character then
+                local root = character:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local parentIsBalls = self.Parent and self.Parent ~= workspace:FindFirstChild("Balls")
+                    if parentIsBalls then
+                        return S.IndexOriginal(self, key)
+                    end
+                    return root.Position
+                end
+            end
+        end
+
+        if key == "Size" and S.OrigSize[self] then
+            return S.OrigSize[self]
+        end
+        if key == "Transparency" and S.OrigTrans[self] then
+            return S.OrigTrans[self]
+        end
+
+        local reachActive = S.Reach.Better or S.Reach.Normal
+        if reachActive and key == "Team" and self == S.LP then
+            return S.GKFolder
+        end
+
+        if S.Player.InfStamina then
+            if key == "MoveDirection" or key == "Velocity" then
+                return Vector3.new(0, 0, 0)
+            end
+            if key == "WalkSpeed" then
+                return 0
+            end
+        end
+    end
+    return S.IndexOriginal(self, key)
+end)
+
+local function getBall()
+    local cached = S.CachedBall
+    if cached and cached.Parent then
+        return cached
+    end
+    local balls = S.World:FindFirstChild("Balls") or S.World:FindFirstChild("balls") or S.World
+    local ball = balls:FindFirstChild("Ball") or balls:FindFirstChild("Football") or balls:FindFirstChild("TPS_Ball")
+    if ball and ball:IsA("BasePart") then
+        S.CachedBall = ball
+        return ball
+    end
+    return nil
+end
+
+task.spawn(function()
+    local ok, result = pcall(function()
+        return S.RS:WaitForChild("PCTools"):WaitForChild("Shoot"):WaitForChild("Shoot_Controls")
+    end)
+    if ok and result then
+        local module = require(result)
+        for _, key in ipairs(S.ActionKeys) do
+            local entry = module[key]
+            if entry and entry.Touched then
+                local original = entry.Touched
+                function entry.Touched(args)
+                    for i = 1, #args do
+                        local item = args[i]
+                        if type(item) == "table" and item.applyForce then
+                            local force = item.applyForce
+                            function item.applyForce(a, b, c)
+                                if S.Ball.ShotPower then
+                                    b = Vector3.new(b.X * S.Ball.ShotMult, b.Y, b.Z * S.Ball.ShotMult)
+                                end
+                                return force(a, b, c)
+                            end
+                            original(args)
+                            item.applyForce = force
+                            return
+                        end
+                    end
+                    return original(args)
+                end
+            end
+        end
+    end
+end)
+
+local function patchKickActions(enable)
+    for _, obj in pairs(getgc(true)) do
+        local isTable = type(obj) == "table"
+        local action = isTable and rawget(obj, "Action")
+        if action then
+            local isKick = action == "PowerShot" or not S.KickActions[action]
+            if isKick then
+                if enable then
+                    if not S.SavedActions[action] then
+                        S.SavedActions[action] = {
+                            ControlCooldown = rawget(obj, "ControlCooldown"),
+                            ResetWait = rawget(obj, "ResetWait"),
+                            WaitForTouched = rawget(obj, "WaitForTouched"),
+                            Constants = {},
+                        }
+                    end
+                    if rawget(obj, "ControlCooldown") then obj.ControlCooldown = 0 end
+                    if rawget(obj, "ResetWait") then obj.ResetWait = 0 end
+                    local canPatchWait = action ~= "PowerShot" and rawget(obj, "WaitForTouched")
+                    if canPatchWait then obj.WaitForTouched = 0 end
+                    if type(rawget(obj, "Touched")) == "function" then
+                        local constants = debug.getconstants(obj.Touched)
+                        for idx, val in pairs(constants) do
+                            if type(val) == "number" then
+                                local isCooldown = action ~= "PowerShot" and (val == 0.1 or val == 0.225 or val == 0.5)
+                                if isCooldown then
+                                    S.SavedActions[action].Constants[idx] = val
+                                    debug.setconstant(obj.Touched, idx, 0)
+                                else
+                                    local isPowerConst = action == "PowerShot" and (val == 15 or val == 5)
+                                    if isPowerConst then
+                                        S.SavedActions[action].Constants[idx] = val
+                                        debug.setconstant(obj.Touched, idx, 0)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                else
+                    local saved = S.SavedActions[action]
+                    if saved then
+                        if rawget(obj, "ControlCooldown") then obj.ControlCooldown = saved.ControlCooldown end
+                        if rawget(obj, "ResetWait") then obj.ResetWait = saved.ResetWait end
+                        if rawget(obj, "WaitForTouched") then obj.WaitForTouched = saved.WaitForTouched end
+                        if type(rawget(obj, "Touched")) == "function" then
+                            for idx, val in pairs(saved.Constants) do
+                                debug.setconstant(obj.Touched, idx, val)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function destroyBallControl()
+    if not S.BallControl.Gui then return end
+    S.BallControl.Gui:Destroy()
+    S.BallControl.Gui = nil
+    if S.BallControl.BV then
+        S.BallControl.BV:Destroy()
+        S.BallControl.BV = nil
+    end
+    if S.BallControl.OriginalSubject then
+        S.Cam.CameraSubject = S.BallControl.OriginalSubject
+        S.BallControl.OriginalSubject = nil
+    end
+    S.BallControl.Active = false
+end
+
+local function createBallControl()
+    if S.BallControl.Gui then return end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "BallControlGUI"
+    gui.Parent = S.LP:WaitForChild("PlayerGui")
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 300, 0, 200)
+    frame.Position = UDim2.new(0, 20, 0.5, -100)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    frame.BorderSizePixel = 0
+    frame.Active = true
+    frame.Draggable = true
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(100, 70, 200)
+    stroke.Thickness = 2
+    stroke.Parent = frame
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.BackgroundColor3 = Color3.fromRGB(40, 30, 80)
+    title.Text = "BALL CONTROL"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 16
+    title.Font = Enum.Font.GothamBold
+    title.Parent = frame
+    Instance.new("UICorner", title).CornerRadius = UDim.new(0, 10)
+
+    local toggle = Instance.new("TextButton")
+    toggle.Size = UDim2.new(0.9, 0, 0, 35)
+    toggle.Position = UDim2.new(0.05, 0, 0.25, 0)
+    toggle.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    toggle.Text = "BALL CONTROL: OFF"
+    toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggle.TextSize = 13
+    toggle.Font = Enum.Font.Gotham
+    toggle.Parent = frame
+    Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 6)
+
+    local speedBox = Instance.new("TextBox")
+    speedBox.Size = UDim2.new(0.9, 0, 0, 30)
+    speedBox.Position = UDim2.new(0.05, 0, 0.5, 0)
+    speedBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    speedBox.Text = "Speed: 500"
+    speedBox.TextSize = 12
+    speedBox.Font = Enum.Font.Gotham
+    speedBox.Parent = frame
+    Instance.new("UICorner", speedBox).CornerRadius = UDim.new(0, 6)
+
+    local tpButton = Instance.new("TextButton")
+    tpButton.Size = UDim2.new(0.9, 0, 0, 30)
+    tpButton.Position = UDim2.new(0.05, 0, 0.7, 0)
+    tpButton.BackgroundColor3 = Color3.fromRGB(70, 150, 255)
+    tpButton.Text = "TELEPORT TO BALL"
+    tpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tpButton.TextSize = 12
+    tpButton.Font = Enum.Font.Gotham
+    tpButton.Parent = frame
+    Instance.new("UICorner", tpButton).CornerRadius = UDim.new(0, 6)
+
+    toggle.MouseButton1Click:Connect(function()
+        S.BallControl.Active = not S.BallControl.Active
+        if S.BallControl.Active then
+            local ball = getBall()
+            if ball then
+                if S.BallControl.BV then S.BallControl.BV:Destroy() end
+                local bv = Instance.new("BodyVelocity")
+                bv.Velocity = Vector3.zero
+                bv.MaxForce = Vector3.new(100000, 100000, 100000)
+                bv.Parent = ball
+                S.BallControl.BV = bv
+                S.BallControl.OriginalSubject = S.Cam.CameraSubject
+                S.Cam.CameraSubject = ball
+                toggle.Text = "BALL CONTROL: ON"
+                toggle.BackgroundColor3 = Color3.fromRGB(60, 200, 60)
+                return
+            end
+            S.BallControl.Active = false
+            return
+        end
+        if S.BallControl.BV then
+            S.BallControl.BV:Destroy()
+            S.BallControl.BV = nil
+        end
+        if S.BallControl.OriginalSubject then
+            S.Cam.CameraSubject = S.BallControl.OriginalSubject
+        end
+        toggle.Text = "BALL CONTROL: OFF"
+        toggle.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    end)
+
+    tpButton.MouseButton1Click:Connect(function()
+        local ball = getBall()
+        local character = S.LP.Character
+        if ball and character and character:FindFirstChild("HumanoidRootPart") then
+            character.HumanoidRootPart.CFrame = ball.CFrame + Vector3.new(0, 5, 0)
+        end
+    end)
+
+    speedBox.FocusLost:Connect(function()
+        local num = tonumber(speedBox.Text:match("%d+"))
+        if num then
+            S.BallControl.Speed = math.clamp(num, 1, 1000)
+        end
+        speedBox.Text = "Speed: " .. S.BallControl.Speed
+    end)
+
+    S.Run.Heartbeat:Connect(function()
+        if S.BallControl.Active and S.BallControl.BV and getBall() then
+            S.BallControl.BV.Velocity = S.Cam.CFrame.LookVector * S.BallControl.Speed
+        end
+    end)
+
+    S.BallControl.Gui = gui
+end
+
+local function applyLimb(part, sizeMult, transValue, originalSize, originalTrans, enabled)
+    if not part or not part:IsA("BasePart") then return end
+    local targetSize = enabled and originalSize * sizeMult or originalSize
+    local targetTrans = enabled and transValue or originalTrans
+
+    if enabled then
+        S.OrigSize[part] = originalSize
+        S.OrigTrans[part] = originalTrans
+        part.CanCollide = false
+        part.Massless = true
+    else
+        part.CanCollide = true
+        part.Massless = false
+    end
+
+    if (part.Size - targetSize).Magnitude > 0.01 then
+        part.Size = targetSize
+    end
+    if math.abs(part.Transparency - targetTrans) > 0.01 then
+        part.Transparency = targetTrans
+    end
+end
+
+local function applyLimbGroup(character, partName, sizeMult, transValue, enabled)
+    local part = character:FindFirstChild(partName)
+    if not part then return end
+    local baseSize = S.OrigSize[part] or part.Size
+    local baseTrans = S.OrigTrans[part] or part.Transparency
+    applyLimb(part, sizeMult, transValue, baseSize, baseTrans, enabled)
+
+    for _, joint in ipairs(S.TrackMap) do
+        if joint and joint.Parent then
+            local attached
+            if part == joint.Part0 then
+                attached = joint.Part1
+            elseif part == joint.Part1 then
+                attached = joint.Part0
+            end
+            if attached and attached:IsDescendantOf(character) and attached ~= character.PrimaryPart then
+                local baseTrans2 = S.OrigTrans[attached] or attached.Transparency
+                local targetTrans = enabled and transValue or baseTrans2
+                if math.abs(attached.Transparency - targetTrans) > 0.01 then
+                    attached.Transparency = targetTrans
+                end
+            end
+        end
+    end
+end
+
+S.Run.Stepped:Connect(function()
+    local character = S.LP.Character
+    if S.Player.InfStamina and character then
+        character:SetAttribute("Walking", false)
+        character:SetAttribute("Sprinting", false)
+    end
+end)
+
+S.Run.Heartbeat:Connect(function()
+    local character = S.LP.Character
+    if not character then return end
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    if S.Reach.ShowBox then
+        if S.Reach.BoxFollowCam then
+            hitbox.CFrame = S.Cam.CFrame
+        else
+            hitbox.CFrame = root.CFrame
+        end
+    end
+
+    local ball = getBall()
+    if S.Ball.TP and ball then
+        root.CFrame = CFrame.new(ball.Position + Vector3.new(0, 3, 0))
+    end
+
+    local reachActive = S.Reach.Better or S.Reach.Normal
+    if reachActive and S.GameActive then
+        local rootPos = root.Position
+        local limb = character:FindFirstChild("Right Leg")
+            or character:FindFirstChild("RightFoot")
+            or character:FindFirstChild("RightLowerLeg")
+            or character:FindFirstChild("RightUpperLeg")
+            or root
+        local now = tick()
+        local tool = S.HeldTool
+        local interval = S.LastActivity
+        local limit = S.BallLimit
+        local maxHits = limit
+
+        if tool ~= "" then
+            local lower = string.lower(tool)
+            local isGK = lower:find("gk") or lower:find("goalie")
+            if isGK then
+                limit = 1
+                interval = 0.4
+                maxHits = 1
+            else
+                local isSkill = lower:find("special") or lower:find("skill")
+                if isSkill then
+                    maxHits = 1
+                    interval = 0.5
+                elseif lower:find("shoot") or lower:find("kick") then
+                    interval = 0.3
+                    maxHits = 2
+                elseif lower:find("dribble") then
+                    interval = 0.25
+                    maxHits = 2
+                end
+            end
+        end
+
+        if now - S.GlobalTick >= S.TouchStep then
+            local hits = 0
+            for _, ballPart in ipairs(S.TrackedList) do
+                if hits >= maxHits then break end
+                if ballPart and ballPart.Parent and ballPart:IsA("BasePart") then
+                    if not ballPart:GetAttribute("OriginalPosition") then
+                        ballPart:SetAttribute("OriginalPosition", ballPart.Position)
+                    end
+                    local dist = (rootPos - ballPart.Position).Magnitude
+                    if dist <= S.Reach.Distance and interval <= now - (S.TouchCooldown[ballPart] or 0) then
+                        S.TouchCooldown[ballPart] = now
+                        if firetouchinterest and not S.Touching then
+                            S.Touching = true
+                            pcall(function()
+                                firetouchinterest(ballPart, limb, 0)
+                                task.wait(S.Reach.TouchRate)
+                                firetouchinterest(ballPart, limb, 1)
+                            end)
+                            S.Touching = false
+                            hits += 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if S.Movement.Noclip then
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+
+    if S.Movement.Fly then
+        if not S.Movement.FlyBV or S.Movement.FlyBV.Parent ~= root then
+            if S.Movement.FlyBV then S.Movement.FlyBV:Destroy() end
+            local bv = Instance.new("BodyVelocity")
+            bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+            bv.Velocity = Vector3.zero
+            bv.Parent = root
+            S.Movement.FlyBV = bv
+        end
+        local move = Vector3.zero
+        if UserInput:IsKeyDown(Enum.KeyCode.W) then move += S.Cam.CFrame.LookVector end
+        if UserInput:IsKeyDown(Enum.KeyCode.S) then move -= S.Cam.CFrame.LookVector end
+        if UserInput:IsKeyDown(Enum.KeyCode.A) then move -= S.Cam.CFrame.RightVector end
+        if UserInput:IsKeyDown(Enum.KeyCode.D) then move += S.Cam.CFrame.RightVector end
+        if UserInput:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0, 1, 0) end
+        if UserInput:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0, 1, 0) end
+        if move.Magnitude > 0 then
+            S.Movement.FlyBV.Velocity = move.Unit * S.Movement.FlySpeed
+        else
+            S.Movement.FlyBV.Velocity = Vector3.zero
+        end
+    elseif S.Movement.FlyBV then
+        S.Movement.FlyBV:Destroy()
+        S.Movement.FlyBV = nil
+    end
+
+    if S.Movement.AntiFling then
+        local velocity = root.AssemblyLinearVelocity
+        if velocity.Magnitude > 150 then
+            root.AssemblyLinearVelocity = velocity.Unit * 150
+        end
+    end
+
+    if S.Camera.FovOn then
+        S.Cam.FieldOfView = S.Camera.Fov
+    end
+
+    if S.Camera.ZoomOn then
+        S.LP.CameraMaxZoomDistance = S.Camera.Zoom
+        S.LP.CameraMinZoomDistance = math.min(S.Camera.Zoom, 0.5)
+    end
+
+    if S.Camera.LockBall then
+        if ball then S.Cam.CameraSubject = ball end
+    end
+
+    if S.Camera.Freecam then
+        if not S.Camera.FreecamPart or not S.Camera.FreecamPart.Parent then
+            local part = Instance.new("Part")
+            part.Name = "OutlawFreecam"
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanQuery = false
+            part.CanTouch = false
+            part.Transparency = 1
+            part.Size = Vector3.new(1, 1, 1)
+            part.CFrame = S.Cam.CFrame
+            part.Parent = S.World
+            S.Camera.FreecamPart = part
+            S.Camera.LockOriginal = S.Cam.CameraSubject
+            S.Cam.CameraSubject = part
+        end
+        local part = S.Camera.FreecamPart
+        local move = Vector3.zero
+        if UserInput:IsKeyDown(Enum.KeyCode.W) then move += S.Cam.CFrame.LookVector end
+        if UserInput:IsKeyDown(Enum.KeyCode.S) then move -= S.Cam.CFrame.LookVector end
+        if UserInput:IsKeyDown(Enum.KeyCode.A) then move -= S.Cam.CFrame.RightVector end
+        if UserInput:IsKeyDown(Enum.KeyCode.D) then move += S.Cam.CFrame.RightVector end
+        if UserInput:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0, 1, 0) end
+        if UserInput:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0, 1, 0) end
+        if move.Magnitude > 0 then
+            part.CFrame = part.CFrame + move.Unit * S.Camera.FreecamSpeed * (1/60)
+        end
+    elseif S.Camera.FreecamPart then
+        S.Camera.FreecamPart:Destroy()
+        S.Camera.FreecamPart = nil
+        if S.Camera.LockOriginal then
+            S.Cam.CameraSubject = S.Camera.LockOriginal
+            S.Camera.LockOriginal = nil
+        end
+    end
+
+    if S.BallUtil.Freeze and ball then
+        if os.clock() < S.BallUtil.FreezeUntil then
+            if not S.BallUtil.FreezeAnchor or not S.BallUtil.FreezeAnchor.Parent then
+                local anchor = Instance.new("Part")
+                anchor.Name = "OutlawBallAnchor"
+                anchor.Anchored = true
+                anchor.CanCollide = false
+                anchor.CanQuery = false
+                anchor.CanTouch = false
+                anchor.Transparency = 1
+                anchor.Size = Vector3.new(1, 1, 1)
+                anchor.CFrame = ball.CFrame
+                anchor.Parent = S.World
+                S.BallUtil.FreezeAnchor = anchor
+            end
+            ball.CFrame = S.BallUtil.FreezeAnchor.CFrame
+        elseif S.BallUtil.FreezeAnchor then
+            S.BallUtil.FreezeAnchor:Destroy()
+            S.BallUtil.FreezeAnchor = nil
+        end
+    elseif S.BallUtil.FreezeAnchor then
+        S.BallUtil.FreezeAnchor:Destroy()
+        S.BallUtil.FreezeAnchor = nil
+    end
+
+    if S.BallUtil.Magnet and ball then
+        local distance = (ball.Position - root.Position).Magnitude
+        if distance <= S.BallUtil.MagnetRadius then
+            if not S.BallUtil.MagnetBV or S.BallUtil.MagnetBV.Parent ~= ball then
+                if S.BallUtil.MagnetBV then S.BallUtil.MagnetBV:Destroy() end
+                local bv = Instance.new("BodyVelocity")
+                bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+                bv.P = S.BallUtil.MagnetForce
+                bv.Velocity = Vector3.zero
+                bv.Parent = ball
+                S.BallUtil.MagnetBV = bv
+            end
+            S.BallUtil.MagnetBV.Velocity = (root.Position - ball.Position).Unit * 30
+        elseif S.BallUtil.MagnetBV then
+            S.BallUtil.MagnetBV:Destroy()
+            S.BallUtil.MagnetBV = nil
+        end
+    elseif S.BallUtil.MagnetBV then
+        S.BallUtil.MagnetBV:Destroy()
+        S.BallUtil.MagnetBV = nil
+    end
+
+    if S.BallUtil.Spin and ball then
+        ball.AssemblyAngularVelocity = S.BallUtil.SpinVec
+    end
+
+    if S.Possession.Track and ball then
+        local owner = ball:GetAttribute("Owner")
+        S.Possession.OwnerName = owner and tostring(owner) or "None"
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.05)
+        if S.BallUtil.Trajectory then
+            local ball = getBall()
+            if ball and ball.Parent then
+                if not S.BallUtil.TrajParts or not S.BallUtil.TrajParts[1].Parent then
+                    local att0 = Instance.new("Attachment")
+                    att0.Parent = ball
+                    local endPart = Instance.new("Part")
+                    endPart.Anchored = true
+                    endPart.CanCollide = false
+                    endPart.CanQuery = false
+                    endPart.CanTouch = false
+                    endPart.Transparency = 1
+                    endPart.Size = Vector3.new(0.1, 0.1, 0.1)
+                    endPart.Parent = S.World
+                    local att1 = Instance.new("Attachment")
+                    att1.Parent = endPart
+                    local beam = Instance.new("Beam")
+                    beam.Attachment0 = att0
+                    beam.Attachment1 = att1
+                    beam.Width0 = 0.15
+                    beam.Width1 = 0.15
+                    beam.FaceCamera = true
+                    beam.Color = ColorSequence.new(Color3.fromRGB(255, 200, 0))
+                    beam.Transparency = NumberSequence.new(0.3)
+                    beam.Parent = ball
+                    S.BallUtil.TrajParts = {beam, att0, att1, endPart}
+                end
+                local beam, att0, att1, endPart = S.BallUtil.TrajParts[1], S.BallUtil.TrajParts[2], S.BallUtil.TrajParts[3], S.BallUtil.TrajParts[4]
+                if att0.Parent ~= ball then att0.Parent = ball end
+                local velocity = ball.AssemblyLinearVelocity
+                local target = ball.Position + velocity.Unit * math.clamp(velocity.Magnitude, 5, 60)
+                endPart.Position = target
+            end
+        elseif S.BallUtil.TrajParts then
+            for _, part in ipairs(S.BallUtil.TrajParts) do
+                pcall(function() part:Destroy() end)
+            end
+            S.BallUtil.TrajParts = nil
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.05)
+        local pg = S.LP:FindFirstChildOfClass("PlayerGui")
+        if not pg then continue end
+
+        if S.Visual.BallBox then
+            if not S.Visual.BallBoxGui or not S.Visual.BallBoxGui.Parent then
+                local gui = Instance.new("ScreenGui")
+                gui.Name = "OutlawBallBoxESP"
+                gui.ResetOnSpawn = false
+                gui.IgnoreGuiInset = true
+                gui.Parent = pg
+                S.Visual.BallBoxGui = gui
+            end
+            local ball = getBall()
+            local box = S.Visual.BallBoxGui:FindFirstChild("Box")
+            if ball then
+                local pos, onScreen = S.Cam:WorldToViewportPoint(ball.Position)
+                if onScreen then
+                    if not box then
+                        box = Instance.new("Frame")
+                        box.Name = "Box"
+                        box.BackgroundTransparency = 1
+                        box.Parent = S.Visual.BallBoxGui
+                        local stroke = Instance.new("UIStroke")
+                        stroke.Color = S.Visual.BallBoxColor
+                        stroke.Thickness = 1.5
+                        stroke.Parent = box
+                    end
+                    local size = 40
+                    box.Size = UDim2.new(0, size, 0, size)
+                    box.Position = UDim2.new(0, pos.X - size / 2, 0, pos.Y - size / 2)
+                    box.Visible = true
+                    local stroke = box:FindFirstChildOfClass("UIStroke")
+                    if stroke then stroke.Color = S.Visual.BallBoxColor end
+                elseif box then
+                    box.Visible = false
+                end
+            elseif box then
+                box.Visible = false
+            end
+        elseif S.Visual.BallBoxGui then
+            S.Visual.BallBoxGui:Destroy()
+            S.Visual.BallBoxGui = nil
+        end
+
+        if S.Visual.PlayerESP or S.Visual.Tracer then
+            if not S.Visual.PlayerESPGui or not S.Visual.PlayerESPGui.Parent then
+                local gui = Instance.new("ScreenGui")
+                gui.Name = "OutlawPlayerESP"
+                gui.ResetOnSpawn = false
+                gui.IgnoreGuiInset = true
+                gui.Parent = pg
+                S.Visual.PlayerESPGui = gui
+            end
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= S.LP then
+                    local isOpponent = true
+                    if player.Team and S.LP.Team then
+                        isOpponent = player.Team ~= S.LP.Team
+                    end
+                    if isOpponent and player.Character then
+                        local head = player.Character:FindFirstChild("Head")
+                        local root = player.Character:FindFirstChild("HumanoidRootPart")
+                        local hum = player.Character:FindFirstChildOfClass("Humanoid")
+                        if head and root and hum then
+                            local pos, onScreen = S.Cam:WorldToViewportPoint(head.Position)
+                            local tag = S.Visual.PlayerESPGui:FindFirstChild(tostring(player.UserId) .. "_tag")
+                            local line = S.Visual.PlayerESPGui:FindFirstChild(tostring(player.UserId) .. "_line")
+                            if S.Visual.PlayerESP and onScreen then
+                                if not tag then
+                                    tag = Instance.new("TextLabel")
+                                    tag.Name = tostring(player.UserId) .. "_tag"
+                                    tag.BackgroundTransparency = 1
+                                    tag.TextColor3 = Color3.fromRGB(255, 80, 80)
+                                    tag.Font = Enum.Font.Code
+                                    tag.TextSize = 12
+                                    tag.TextStrokeTransparency = 0
+                                    tag.Parent = S.Visual.PlayerESPGui
+                                end
+                                local dist = math.floor((root.Position - S.Cam.CFrame.Position).Magnitude)
+                                tag.Text = player.Name .. " | " .. dist .. " | " .. math.floor(hum.Health) .. "hp"
+                                tag.Position = UDim2.new(0, pos.X + 8, 0, pos.Y - 8)
+                                tag.Visible = true
+                            elseif tag then
+                                tag.Visible = false
+                            end
+                            if S.Visual.Tracer and onScreen then
+                                if not line then
+                                    line = Instance.new("Frame")
+                                    line.Name = tostring(player.UserId) .. "_line"
+                                    line.BackgroundColor3 = S.Visual.TracerColor
+                                    line.BorderSizePixel = 0
+                                    line.Parent = S.Visual.PlayerESPGui
+                                end
+                                local sPos = S.Cam:WorldToViewportPoint(root.Position)
+                                local origin = Vector2.new(S.Cam.ViewportSize.X / 2, S.Cam.ViewportSize.Y)
+                                local from = Vector2.new(sPos.X, sPos.Y)
+                                local delta = origin - from
+                                local length = delta.Magnitude
+                                local mid = (from + origin) / 2
+                                local angle = math.atan2(delta.Y, delta.X)
+                                line.Size = UDim2.new(0, length, 0, 1)
+                                line.Position = UDim2.new(0, mid.X, 0, mid.Y)
+                                line.Rotation = math.deg(angle)
+                                line.BackgroundColor3 = S.Visual.TracerColor
+                                line.Visible = true
+                            elseif line then
+                                line.Visible = false
+                            end
+                        end
+                    end
+                end
+            end
+        elseif S.Visual.PlayerESPGui then
+            S.Visual.PlayerESPGui:Destroy()
+            S.Visual.PlayerESPGui = nil
+        end
+
+        if S.Possession.Track then
+            if not S.Possession.Gui or not S.Possession.Gui.Parent then
+                local gui = Instance.new("ScreenGui")
+                gui.Name = "OutlawPossession"
+                gui.ResetOnSpawn = false
+                gui.IgnoreGuiInset = true
+                gui.Parent = pg
+                S.Possession.Gui = gui
+                local frame = Instance.new("Frame")
+                frame.Name = "Root"
+                frame.Size = UDim2.new(0, 240, 0, 32)
+                frame.Position = UDim2.new(0.5, -120, 0, 12)
+                frame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+                frame.BackgroundTransparency = 0.25
+                frame.BorderSizePixel = 0
+                frame.Parent = gui
+                Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
+                local label = Instance.new("TextLabel")
+                label.Name = "Body"
+                label.Size = UDim2.new(1, -12, 1, 0)
+                label.Position = UDim2.new(0, 6, 0, 0)
+                label.BackgroundTransparency = 1
+                label.TextColor3 = Color3.fromRGB(0, 255, 130)
+                label.Font = Enum.Font.GothamBold
+                label.TextSize = 14
+                label.TextXAlignment = Enum.TextXAlignment.Left
+                label.Parent = frame
+            end
+            local label = S.Possession.Gui:FindFirstChild("Root"):FindFirstChild("Body")
+            if label then
+                label.Text = "Possession: " .. S.Possession.OwnerName
+            end
+        elseif S.Possession.Gui then
+            S.Possession.Gui:Destroy()
+            S.Possession.Gui = nil
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.1) do
+        local ball = getBall()
+        if not ball then continue end
+
+        if S.Ball.AutoOwner then
+            local container = S.RS:FindFirstChild("Events") or S.RS
+            local remote = container:FindFirstChild("Ball") or container:FindFirstChild("ball")
+            if remote then
+                remote:FireServer("OwnershipRequest", {ball})
+            end
+        end
+
+        local target
+        if S.Aim.Red then
+            target = Vector3.new(-210, 4, 2)
+        elseif S.Aim.Blue then
+            target = Vector3.new(208, 4, -1)
+        end
+
+        if target then
+            if S.Aim.Predict then
+                target = target + ball.AssemblyLinearVelocity * S.Aim.PredictScale * 0.2
+            end
+            if S.Aim.Curve and (target - ball.Position).Magnitude > 20 then
+                target = target + Vector3.new(0, (target - ball.Position).Magnitude * S.Aim.CurveAmount, 0)
+            end
+            local dir = target - ball.Position
+            if dir.Magnitude > 5 then
+                if S.Aim.Smooth then
+                    ball.Velocity = ball.Velocity:Lerp(dir.Unit * S.Aim.Speed, S.Aim.SmoothAlpha)
+                else
+                    ball.Velocity = dir.Unit * S.Aim.Speed
+                end
+            else
+                ball.Velocity = Vector3.zero
+            end
+            if S.Aim.AutoShoot then
+                local root = S.LP.Character and S.LP.Character:FindFirstChild("HumanoidRootPart")
+                if root and (ball.Position - root.Position).Magnitude <= S.Aim.AutoShootRange then
+                    pcall(function()
+                        VirtualInput:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                        task.wait(0.05)
+                        VirtualInput:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                    end)
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.3) do
+        local ball = getBall()
+        if S.Ball.Highlight and ball then
+            if not S.BallHighlight or ball ~= S.BallHighlight.Parent then
+                if S.BallHighlight then S.BallHighlight:Destroy() end
+                local highlight = Instance.new("Highlight")
+                highlight.Name = "BallHighlight"
+                highlight.FillColor = Color3.fromRGB(160, 32, 240)
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                highlight.FillTransparency = 0.5
+                highlight.OutlineTransparency = 0
+                highlight.Parent = ball
+                S.BallHighlight = highlight
+            end
+        elseif S.BallHighlight then
+            S.BallHighlight:Destroy()
+            S.BallHighlight = nil
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if S.Visual.Fullbright then
+            if not S.Visual.SavedBrightness then
+                S.Visual.SavedBrightness = Lighting.Brightness
+                S.Visual.SavedAmbient = Lighting.Ambient
+                S.Visual.SavedOutdoor = Lighting.OutdoorAmbient
+            end
+            Lighting.Brightness = 3
+            Lighting.Ambient = Color3.new(1, 1, 1)
+            Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+        elseif S.Visual.SavedBrightness then
+            Lighting.Brightness = S.Visual.SavedBrightness
+            Lighting.Ambient = S.Visual.SavedAmbient
+            Lighting.OutdoorAmbient = S.Visual.SavedOutdoor
+            S.Visual.SavedBrightness = nil
+            S.Visual.SavedAmbient = nil
+            S.Visual.SavedOutdoor = nil
+        end
+
+        if S.Visual.NightVision then
+            if not S.Visual.NightVisionEffect then
+                local effect = Instance.new("ColorCorrectionEffect")
+                effect.Name = "OutlawNightVision"
+                effect.Brightness = 0.1
+                effect.Contrast = 0.3
+                effect.Saturation = -1
+                effect.TintColor = Color3.fromRGB(0, 255, 0)
+                effect.Parent = Lighting
+                S.Visual.NightVisionEffect = effect
+            end
+        elseif S.Visual.NightVisionEffect then
+            S.Visual.NightVisionEffect:Destroy()
+            S.Visual.NightVisionEffect = nil
+        end
+
+        if S.Visual.NoFog then
+            if not S.Visual.SavedFogEnd then
+                S.Visual.SavedFogEnd = Lighting.FogEnd
+            end
+            Lighting.FogEnd = 1e6
+        elseif S.Visual.SavedFogEnd then
+            Lighting.FogEnd = S.Visual.SavedFogEnd
+            S.Visual.SavedFogEnd = nil
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.3) do
+        if S.Visual.TeamHighlight then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= S.LP and player.Character then
+                    local isOpponent = true
+                    if player.Team and S.LP.Team then
+                        isOpponent = player.Team ~= S.LP.Team
+                    end
+                    local existing = player.Character:FindFirstChild("OutlawTeamHighlight")
+                    if isOpponent and not existing then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = "OutlawTeamHighlight"
+                        highlight.FillColor = Color3.fromRGB(255, 40, 40)
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        highlight.FillTransparency = 0.6
+                        highlight.OutlineTransparency = 0
+                        highlight.Parent = player.Character
+                        table.insert(S.Visual.TeamHighlights, highlight)
+                    elseif not isOpponent and existing then
+                        existing:Destroy()
+                    end
+                end
+            end
+        elseif #S.Visual.TeamHighlights > 0 then
+            for _, highlight in ipairs(S.Visual.TeamHighlights) do
+                pcall(function() highlight:Destroy() end)
+            end
+            S.Visual.TeamHighlights = {}
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.25) do
+        local character = S.LP.Character
+        if character and next(S.OrigSize) then
+            local legParts = {
+                ["Left Leg"] = true,
+                ["Right Leg"] = true,
+                LeftFoot = true,
+                RightFoot = true,
+            }
+            local armParts = {
+                ["Left Arm"] = true,
+                ["Right Arm"] = true,
+                LeftUpperArm = true,
+                LeftLowerArm = true,
+                LeftHand = true,
+                RightUpperArm = true,
+                RightLowerArm = true,
+                RightHand = true,
+            }
+            for name in pairs(legParts) do
+                applyLimbGroup(character, name, S.Limbs.LegSize, S.Limbs.LegTrans, S.Limbs.Legs)
+            end
+            for name in pairs(armParts) do
+                applyLimbGroup(character, name, S.Limbs.ArmSize, S.Limbs.ArmTrans, S.Limbs.Arms)
+            end
+        end
+    end
+end)
+
+GuiService.ErrorMessageChanged:Connect(function()
+    if S.Movement.AutoRejoin then
+        task.wait(1)
+        TeleportService:Teleport(game.PlaceId, S.LP)
+    end
+end)
+
+local function findVotekickRemote()
+    local events = ReplicatedStorage:FindFirstChild("Events")
+    if not events then return nil end
+    return events:FindFirstChild("Votekick")
+        or events:FindFirstChild("VoteKick")
+        or events:FindFirstChild("votekick")
+end
+
+local function hideVotekickUI()
+    if not S.Votekick.HideUI then return end
+    local pg = S.LP:FindFirstChildOfClass("PlayerGui")
+    if not pg then return end
+    local main = pg:FindFirstChild("Main")
+    if not main then return end
+    local vk = main:FindFirstChild("Votekick")
+    if not vk then return end
+    if vk:IsA("ScreenGui") or vk:IsA("Frame") then
+        pcall(function() vk.Visible = false end)
+        pcall(function() vk.Enabled = false end)
+    end
+end
+
+local function stripVotekickButtons()
+    if not S.Votekick.HideUI then return end
+    local pg = S.LP:FindFirstChildOfClass("PlayerGui")
+    if not pg then return end
+    local main = pg:FindFirstChild("Main")
+    if not main then return end
+    local vk = main:FindFirstChild("Votekick")
+    if not vk then return end
+    local scroll = vk:FindFirstChild("ScrollingFrame")
+    local frame = scroll and scroll:FindFirstChild("Frame")
+    if not frame then return end
+    for _, child in ipairs(frame:GetChildren()) do
+        if child:IsA("TextButton") then
+            pcall(function() child:Destroy() end)
+        end
+    end
+end
+
+local function watchVotekick()
+    local pg = S.LP:FindFirstChildOfClass("PlayerGui")
+    if not pg then return end
+    local function bindMain(main)
+        if not main then return end
+        local function bindVk(vk)
+            if not vk then return end
+            hideVotekickUI()
+            stripVotekickButtons()
+            if not vk:IsA("ScreenGui") and not vk:IsA("Frame") then return end
+            local conn = vk:GetPropertyChangedSignal("Visible"):Connect(function()
+                if S.Votekick.Enabled and S.Votekick.HideUI and vk.Visible then
+                    vk.Visible = false
+                end
+            end)
+            table.insert(S.Votekick.UiConns, conn)
+        end
+        bindVk(main:FindFirstChild("Votekick"))
+        table.insert(S.Votekick.UiConns, main.ChildAdded:Connect(function(child)
+            if child.Name == "Votekick" then
+                task.wait(0.05)
+                bindVk(child)
+            end
+        end))
+    end
+    bindMain(pg:FindFirstChild("Main"))
+    table.insert(S.Votekick.UiConns, pg.ChildAdded:Connect(function(child)
+        if child.Name == "Main" then
+            task.wait(0.05)
+            bindMain(child)
+        end
+    end))
+end
+
+local function startVotekickDefense()
+    if S.Votekick.Hooked then return end
+    S.Votekick.Hooked = true
+    task.spawn(function()
+        while S.Votekick.Enabled do
+            task.wait(0.5)
+            hideVotekickUI()
+            stripVotekickButtons()
+        end
+    end)
+    watchVotekick()
+end
+
+local function stopVotekickDefense()
+    S.Votekick.Hooked = false
+    for _, conn in ipairs(S.Votekick.UiConns) do
+        pcall(function() conn:Disconnect() end)
+    end
+    S.Votekick.UiConns = {}
+end
+
+local Window = Airflow:CreateWindow({
+    Name = "Outlaw.dev",
+    LoadingSubtitle = "Outlaw.dev",
+    ToggleUIKeybind = "RightControl",
+    ConfigurationSaving = {Enabled = true, FolderName = "Outlaw", FileName = "default"},
+    Home = {
+        Name = "Home",
+        Stats = {"FPS", "Ping", "Executor", "Game", "Region", "Time"},
+    },
+})
+
+local ReachTab = Window:CreateTab("Reach")
+local BallTab = Window:CreateTab("Ball")
+local PossessionTab = Window:CreateTab("Possession")
+local PlayerTab = Window:CreateTab("Player")
+local CamTab = Window:CreateTab("Camera")
+local EspTab = Window:CreateTab("ESP")
+local AimbotTab = Window:CreateTab("Aimbot")
+local PanicTab = Window:CreateTab("Panic")
+local AntiCheatTab = Window:CreateTab("Anti Cheat")
+local VisTab = Window:CreateTab("Visual")
+local LimbsTab = Window:CreateTab("Limbs")
+
+ReachTab:CreateSection("Reach")
+ReachTab:CreateToggle({
+    Name = "Normal Reach",
+    CurrentValue = false,
+    Flag = "BasicReach",
+    Callback = function(v)
+        S.Reach.Normal = v
+        if v then refreshBallList() end
+    end,
+})
+ReachTab:CreateToggle({
+    Name = "Better Reach",
+    CurrentValue = false,
+    Flag = "UltimateReach",
+    Callback = function(v)
+        S.Reach.Better = v
+        if v then
+            refreshBallList()
+            return
+        end
+        for _, ball in ipairs(S.TrackedList) do
+            if ball and ball:IsA("BasePart") then
+                pcall(function()
+                    local pos = ball.Position
+                    ball.Position = pos + Vector3.new(0, 0.001, 0)
+                    task.wait(0.01)
+                    ball.Position = pos
+                end)
+            end
+        end
+    end,
+})
+ReachTab:CreateSlider({
+    Name = "Reach Distance",
+    Range = {1, 10},
+    Increment = 0.5,
+    Suffix = " studs",
+    CurrentValue = 3,
+    Flag = "ReachDistance",
+    Callback = function(v)
+        S.Reach.Distance = v
+        hitbox.Size = Vector3.new(v * 2, v * 2, v * 2)
+    end,
+})
+ReachTab:CreateSlider({
+    Name = "Touch Interval",
+    Range = {0.005, 0.2},
+    Increment = 0.005,
+    Suffix = "s",
+    CurrentValue = 0.02,
+    Flag = "FTouchRate",
+    Callback = function(v) S.Reach.TouchRate = v end,
+})
+ReachTab:CreateToggle({
+    Name = "Draw Hitbox",
+    CurrentValue = false,
+    Flag = "ShowBox",
+    Callback = function(v)
+        S.Reach.ShowBox = v
+        hitbox.Parent = v and S.World or nil
+    end,
+})
+ReachTab:CreateToggle({
+    Name = "Hitbox Follow Camera",
+    CurrentValue = false,
+    Flag = "ReachBoxFollowCam",
+    Callback = function(v) S.Reach.BoxFollowCam = v end,
+})
+ReachTab:CreateSlider({
+    Name = "Hitbox Opacity",
+    Range = {0, 1},
+    Increment = 0.05,
+    Suffix = "",
+    CurrentValue = 0.7,
+    Flag = "ReachBoxTrans",
+    Callback = function(v) hitbox.Transparency = v end,
+})
+ReachTab:CreateColorPicker({
+    Name = "Hitbox Color",
+    Color = Color3.fromRGB(255, 50, 50),
+    Flag = "ReachBoxColor",
+    Callback = function(c) hitbox.Color = c end,
+})
+
+BallTab:CreateSection("Ball")
+BallTab:CreateToggle({
+    Name = "Teleport To Ball",
+    CurrentValue = false,
+    Flag = "TPBall",
+    Callback = function(v) S.Ball.TP = v end,
+})
+BallTab:CreateToggle({
+    Name = "Auto Claim Ball",
+    CurrentValue = false,
+    Flag = "AutoOwner",
+    Callback = function(v) S.Ball.AutoOwner = v end,
+})
+BallTab:CreateToggle({
+    Name = "Shot Power Modifier",
+    CurrentValue = false,
+    Flag = "ShotPower",
+    Callback = function(v) S.Ball.ShotPower = v end,
+})
+BallTab:CreateSlider({
+    Name = "Shot Multiplier",
+    Range = {1, 7},
+    Increment = 0.5,
+    Suffix = "x",
+    CurrentValue = 1,
+    Flag = "ShotMult",
+    Callback = function(v) S.Ball.ShotMult = v end,
+})
+BallTab:CreateToggle({
+    Name = "Ball Trajectory",
+    CurrentValue = false,
+    Flag = "BallTrajectory",
+    Callback = function(v) S.BallUtil.Trajectory = v end,
+})
+BallTab:CreateToggle({
+    Name = "Freeze Ball (5s)",
+    CurrentValue = false,
+    Flag = "BallFreeze",
+    Callback = function(v)
+        S.BallUtil.Freeze = v
+        if v then S.BallUtil.FreezeUntil = os.clock() + 5 end
+    end,
+})
+BallTab:CreateToggle({
+    Name = "Ball Magnet",
+    CurrentValue = false,
+    Flag = "BallMagnet",
+    Callback = function(v) S.BallUtil.Magnet = v end,
+})
+BallTab:CreateSlider({
+    Name = "Magnet Radius",
+    Range = {5, 100},
+    Increment = 5,
+    Suffix = " studs",
+    CurrentValue = 30,
+    Flag = "MagnetRadius",
+    Callback = function(v) S.BallUtil.MagnetRadius = v end,
+})
+BallTab:CreateToggle({
+    Name = "Ball Spin",
+    CurrentValue = false,
+    Flag = "BallSpin",
+    Callback = function(v) S.BallUtil.Spin = v end,
+})
+BallTab:CreateSlider({
+    Name = "Spin Y",
+    Range = {-1000, 1000},
+    Increment = 50,
+    Suffix = "",
+    CurrentValue = 100,
+    Flag = "SpinY",
+    Callback = function(v)
+        S.BallUtil.SpinVec = Vector3.new(S.BallUtil.SpinVec.X, v, S.BallUtil.SpinVec.Z)
+    end,
+})
+BallTab:CreateButton({
+    Name = "Ball To Red Goal",
+    Callback = function()
+        local ball = getBall()
+        if ball then
+            ball.CFrame = CFrame.new(Vector3.new(-210, 4, 2))
+        end
+    end,
+})
+BallTab:CreateButton({
+    Name = "Ball To Blue Goal",
+    Callback = function()
+        local ball = getBall()
+        if ball then
+            ball.CFrame = CFrame.new(Vector3.new(208, 4, -1))
+        end
+    end,
+})
+BallTab:CreateToggle({
+    Name = "Ball Size Override",
+    CurrentValue = false,
+    Flag = "BallSizeOverride",
+    Callback = function(v) S.BallUtil.SizeOverride = v end,
+})
+BallTab:CreateSlider({
+    Name = "Ball Size",
+    Range = {1, 5},
+    Increment = 0.1,
+    Suffix = "x",
+    CurrentValue = 1,
+    Flag = "BallSizeMult",
+    Callback = function(v) S.BallUtil.SizeMult = v end,
+})
+BallTab:CreateButton({
+    Name = "Ball Control Panel",
+    Callback = function()
+        if S.BallControl.Gui then
+            destroyBallControl()
+        else
+            createBallControl()
+        end
+    end,
+})
+
+PossessionTab:CreateSection("Possession")
+PossessionTab:CreateToggle({
+    Name = "Track Possession",
+    CurrentValue = false,
+    Flag = "PossTrack",
+    Callback = function(v) S.Possession.Track = v end,
+})
+PossessionTab:CreateToggle({
+    Name = "Possession HUD",
+    CurrentValue = false,
+    Flag = "PossHUD",
+    Callback = function(v) S.Possession.Track = v end,
+})
+PossessionTab:CreateToggle({
+    Name = "ESP Only On Opponent Ball",
+    CurrentValue = false,
+    Flag = "EspOnlyOppPoss",
+    Callback = function(v) S.Visual.EspOnlyOppPoss = v end,
+})
+PossessionTab:CreateButton({
+    Name = "Claim Ball",
+    Callback = function()
+        local ball = getBall()
+        if ball then
+            local container = S.RS:FindFirstChild("Events") or S.RS
+            local remote = container:FindFirstChild("Ball") or container:FindFirstChild("ball")
+            if remote then
+                remote:FireServer("OwnershipRequest", {ball})
+            end
+        end
+    end,
+})
+
+PlayerTab:CreateSection("Movement")
+PlayerTab:CreateToggle({
+    Name = "Noclip",
+    CurrentValue = false,
+    Flag = "Noclip",
+    Callback = function(v) S.Movement.Noclip = v end,
+})
+PlayerTab:CreateToggle({
+    Name = "Fly",
+    CurrentValue = false,
+    Flag = "Fly",
+    Callback = function(v) S.Movement.Fly = v end,
+})
+PlayerTab:CreateSlider({
+    Name = "Fly Speed",
+    Range = {10, 300},
+    Increment = 5,
+    Suffix = " studs/s",
+    CurrentValue = 50,
+    Flag = "FlySpeed",
+    Callback = function(v) S.Movement.FlySpeed = v end,
+})
+PlayerTab:CreateToggle({
+    Name = "Anti Fling",
+    CurrentValue = false,
+    Flag = "AntiFling",
+    Callback = function(v) S.Movement.AntiFling = v end,
+})
+PlayerTab:CreateSection("Speed / Jump")
+PlayerTab:CreateToggle({
+    Name = "Walkspeed Override",
+    CurrentValue = false,
+    Flag = "WalkspeedToggle",
+    Callback = function(v)
+        S.Movement.SpeedOn = v
+        local character = S.LP.Character
+        local hum = character and character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = v and S.Movement.Speed or 16
+        end
+    end,
+})
+PlayerTab:CreateSlider({
+    Name = "Walkspeed",
+    Range = {16, 200},
+    Increment = 1,
+    Suffix = " studs/s",
+    CurrentValue = 23,
+    Flag = "WalkspeedSlider",
+    Callback = function(v)
+        S.Movement.Speed = v
+        if S.Movement.SpeedOn then
+            local character = S.LP.Character
+            local hum = character and character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.WalkSpeed = v end
+        end
+    end,
+})
+PlayerTab:CreateToggle({
+    Name = "JumpPower Override",
+    CurrentValue = false,
+    Flag = "JumpPowerToggle",
+    Callback = function(v)
+        S.Movement.JumpOn = v
+        local character = S.LP.Character
+        local hum = character and character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.UseJumpPower = v
+            if v then hum.JumpPower = S.Movement.JumpPower end
+        end
+    end,
+})
+PlayerTab:CreateSlider({
+    Name = "JumpPower",
+    Range = {50, 500},
+    Increment = 5,
+    Suffix = "",
+    CurrentValue = 50,
+    Flag = "JumpPowerSlider",
+    Callback = function(v)
+        S.Movement.JumpPower = v
+        if S.Movement.JumpOn then
+            local character = S.LP.Character
+            local hum = character and character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.JumpPower = v end
+        end
+    end,
+})
+PlayerTab:CreateToggle({
+    Name = "HipHeight Override",
+    CurrentValue = false,
+    Flag = "HipToggle",
+    Callback = function(v)
+        S.Movement.HipOn = v
+        local character = S.LP.Character
+        local hum = character and character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.HipHeight = v and S.Movement.Hip or 2
+        end
+    end,
+})
+PlayerTab:CreateSlider({
+    Name = "HipHeight",
+    Range = {0, 20},
+    Increment = 0.5,
+    Suffix = "",
+    CurrentValue = 2,
+    Flag = "HipSlider",
+    Callback = function(v)
+        S.Movement.Hip = v
+        if S.Movement.HipOn then
+            local character = S.LP.Character
+            local hum = character and character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.HipHeight = v end
+        end
+    end,
+})
+PlayerTab:CreateToggle({
+    Name = "Auto Rejoin",
+    CurrentValue = false,
+    Flag = "AutoRejoin",
+    Callback = function(v) S.Movement.AutoRejoin = v end,
+})
+PlayerTab:CreateSection("Server")
+PlayerTab:CreateToggle({
+    Name = "Infinite Stamina",
+    CurrentValue = false,
+    Flag = "InfStamina",
+    Callback = function(v) S.Player.InfStamina = v end,
+})
+PlayerTab:CreateToggle({
+    Name = "No Cooldown",
+    CurrentValue = false,
+    Flag = "NoCooldown",
+    Callback = function(v)
+        S.Player.NoCooldown = v
+        patchKickActions(v)
+    end,
+})
+
+CamTab:CreateSection("View")
+CamTab:CreateToggle({
+    Name = "FOV Override",
+    CurrentValue = false,
+    Flag = "FovOn",
+    Callback = function(v) S.Camera.FovOn = v end,
+})
+CamTab:CreateSlider({
+    Name = "FOV",
+    Range = {40, 140},
+    Increment = 1,
+    Suffix = "°",
+    CurrentValue = 70,
+    Flag = "Fov",
+    Callback = function(v) S.Camera.Fov = v end,
+})
+CamTab:CreateToggle({
+    Name = "Zoom Distance Override",
+    CurrentValue = false,
+    Flag = "ZoomOn",
+    Callback = function(v) S.Camera.ZoomOn = v end,
+})
+CamTab:CreateSlider({
+    Name = "Zoom Distance",
+    Range = {1, 200},
+    Increment = 1,
+    Suffix = " studs",
+    CurrentValue = 20,
+    Flag = "Zoom",
+    Callback = function(v) S.Camera.Zoom = v end,
+})
+CamTab:CreateToggle({
+    Name = "Lock Camera To Ball",
+    CurrentValue = false,
+    Flag = "CamLockBall",
+    Callback = function(v)
+        S.Camera.LockBall = v
+        if not v and S.Camera.LockOriginal then
+            S.Cam.CameraSubject = S.Camera.LockOriginal
+            S.Camera.LockOriginal = nil
+        elseif v then
+            S.Camera.LockOriginal = S.Cam.CameraSubject
+        end
+    end,
+})
+CamTab:CreateSection("Freecam")
+CamTab:CreateToggle({
+    Name = "Freecam",
+    CurrentValue = false,
+    Flag = "Freecam",
+    Callback = function(v) S.Camera.Freecam = v end,
+})
+CamTab:CreateSlider({
+    Name = "Freecam Speed",
+    Range = {10, 300},
+    Increment = 5,
+    Suffix = " studs/s",
+    CurrentValue = 50,
+    Flag = "FreecamSpeed",
+    Callback = function(v) S.Camera.FreecamSpeed = v end,
+})
+
+EspTab:CreateSection("Ball")
+EspTab:CreateToggle({
+    Name = "Ball Highlight",
+    CurrentValue = false,
+    Flag = "BallESP",
+    Callback = function(v) S.Ball.Highlight = v end,
+})
+EspTab:CreateToggle({
+    Name = "Ball Box",
+    CurrentValue = false,
+    Flag = "BallBoxESP",
+    Callback = function(v) S.Visual.BallBox = v end,
+})
+EspTab:CreateColorPicker({
+    Name = "Ball Box Color",
+    Color = Color3.fromRGB(0, 255, 130),
+    Flag = "BallBoxColor",
+    Callback = function(c) S.Visual.BallBoxColor = c end,
+})
+EspTab:CreateSection("Players")
+EspTab:CreateToggle({
+    Name = "Player ESP",
+    CurrentValue = false,
+    Flag = "PlayerESP",
+    Callback = function(v) S.Visual.PlayerESP = v end,
+})
+EspTab:CreateToggle({
+    Name = "Tracers",
+    CurrentValue = false,
+    Flag = "Tracer",
+    Callback = function(v) S.Visual.Tracer = v end,
+})
+EspTab:CreateColorPicker({
+    Name = "Tracer Color",
+    Color = Color3.fromRGB(255, 255, 0),
+    Flag = "TracerColor",
+    Callback = function(c) S.Visual.TracerColor = c end,
+})
+EspTab:CreateToggle({
+    Name = "Team Highlight",
+    CurrentValue = false,
+    Flag = "TeamHL",
+    Callback = function(v) S.Visual.TeamHighlight = v end,
+})
+
+AimbotTab:CreateSection("Target")
+AimbotTab:CreateToggle({
+    Name = "Aim Red Goal",
+    CurrentValue = false,
+    Flag = "AimRed",
+    Callback = function(v) S.Aim.Red = v end,
+})
+AimbotTab:CreateToggle({
+    Name = "Aim Blue Goal",
+    CurrentValue = false,
+    Flag = "AimBlue",
+    Callback = function(v) S.Aim.Blue = v end,
+})
+AimbotTab:CreateSlider({
+    Name = "Ball Speed",
+    Range = {10, 5000},
+    Increment = 10,
+    Suffix = "",
+    CurrentValue = 100,
+    Flag = "BallSpeed",
+    Callback = function(v) S.Aim.Speed = v end,
+})
+AimbotTab:CreateSection("Modifiers")
+AimbotTab:CreateToggle({
+    Name = "Smooth Aim",
+    CurrentValue = false,
+    Flag = "AimSmooth",
+    Callback = function(v) S.Aim.Smooth = v end,
+})
+AimbotTab:CreateSlider({
+    Name = "Smoothness",
+    Range = {0.02, 1},
+    Increment = 0.02,
+    Suffix = "",
+    CurrentValue = 0.15,
+    Flag = "AimSmoothAlpha",
+    Callback = function(v) S.Aim.SmoothAlpha = v end,
+})
+AimbotTab:CreateToggle({
+    Name = "Power Curve",
+    CurrentValue = false,
+    Flag = "AimCurve",
+    Callback = function(v) S.Aim.Curve = v end,
+})
+AimbotTab:CreateSlider({
+    Name = "Curve Amount",
+    Range = {0, 1},
+    Increment = 0.05,
+    Suffix = "",
+    CurrentValue = 0.3,
+    Flag = "AimCurveAmt",
+    Callback = function(v) S.Aim.CurveAmount = v end,
+})
+AimbotTab:CreateToggle({
+    Name = "Aim Prediction",
+    CurrentValue = false,
+    Flag = "AimPredict",
+    Callback = function(v) S.Aim.Predict = v end,
+})
+AimbotTab:CreateSlider({
+    Name = "Prediction Scale",
+    Range = {0, 5},
+    Increment = 0.1,
+    Suffix = "x",
+    CurrentValue = 1,
+    Flag = "AimPredictScale",
+    Callback = function(v) S.Aim.PredictScale = v end,
+})
+AimbotTab:CreateSection("Auto Shoot")
+AimbotTab:CreateToggle({
+    Name = "Auto Shoot",
+    CurrentValue = false,
+    Flag = "AutoShoot",
+    Callback = function(v) S.Aim.AutoShoot = v end,
+})
+AimbotTab:CreateSlider({
+    Name = "Auto Shoot Range",
+    Range = {5, 60},
+    Increment = 1,
+    Suffix = " studs",
+    CurrentValue = 20,
+    Flag = "AutoShootRange",
+    Callback = function(v) S.Aim.AutoShootRange = v end,
+})
+
+PanicTab:CreateSection("Kill Switch")
+PanicTab:CreateButton({
+    Name = "Disable All",
+    Callback = function()
+        S.OrigSize = {}
+        S.Ball.Highlight = false
+        S.Ball.TP = false
+        S.Visual.BallBox = false
+        S.Visual.PlayerESP = false
+        S.Visual.Tracer = false
+        S.Visual.TeamHighlight = false
+        S.BallUtil.Trajectory = false
+        S.BallUtil.Magnet = false
+        S.BallUtil.Spin = false
+        S.Movement.Fly = false
+        S.Movement.Noclip = false
+        S.Camera.Freecam = false
+        S.Camera.LockBall = false
+        S.Visual.Fullbright = false
+        S.Visual.NightVision = false
+        S.Visual.NoFog = false
+        for _, child in ipairs(S.World:GetChildren()) do
+            if child.Name == "OutlawFreecam" or child.Name == "OutlawBallAnchor" or child.Name == "ReachHitbox" then
+                pcall(function() child:Destroy() end)
+            end
+        end
+    end,
+})
+PanicTab:CreateSection("Session")
+PanicTab:CreateButton({
+    Name = "Unlock FPS",
+    Callback = function()
+        if setfpscap then
+            setfpscap(9999)
+        end
+    end,
+})
+PanicTab:CreateButton({
+    Name = "Rejoin Server",
+    Callback = function()
+        TeleportService:Teleport(game.PlaceId, S.LP)
+    end,
+})
+
+AntiCheatTab:CreateSection("Votekick")
+AntiCheatTab:CreateToggle({
+    Name = "Anti Votekick",
+    CurrentValue = false,
+    Flag = "AntiVotekick",
+    Callback = function(v)
+        S.Votekick.Enabled = v
+        if v then
+            startVotekickDefense()
+            hideVotekickUI()
+            stripVotekickButtons()
+        else
+            stopVotekickDefense()
+        end
+    end,
+})
+AntiCheatTab:CreateToggle({
+    Name = "Block Fires",
+    CurrentValue = true,
+    Flag = "AntiVotekickBlockFire",
+    Callback = function(v) S.Votekick.BlockFire = v end,
+})
+AntiCheatTab:CreateToggle({
+    Name = "Hide Menu",
+    CurrentValue = true,
+    Flag = "AntiVotekickHideUI",
+    Callback = function(v)
+        S.Votekick.HideUI = v
+        if v then
+            hideVotekickUI()
+            stripVotekickButtons()
+        end
+    end,
+})
+AntiCheatTab:CreateToggle({
+    Name = "Staff Tag Spoof",
+    CurrentValue = false,
+    Flag = "AntiVotekickStaffSpoof",
+    Callback = function(v) S.Votekick.StaffSpoof = v end,
+})
+AntiCheatTab:CreateToggle({
+    Name = "Zero Vote Count",
+    CurrentValue = false,
+    Flag = "AntiVotekickTallySpoof",
+    Callback = function(v) S.Votekick.TallySpoof = v end,
+})
+AntiCheatTab:CreateToggle({
+    Name = "Activity Log",
+    CurrentValue = false,
+    Flag = "AntiVotekickLog",
+    Callback = function(v) S.Votekick.LogEnabled = v end,
+})
+AntiCheatTab:CreateSection("Tools")
+AntiCheatTab:CreateButton({
+    Name = "Purge Remote",
+    Callback = function()
+        hideVotekickUI()
+        stripVotekickButtons()
+        local remote = findVotekickRemote()
+        if remote then
+            pcall(function() remote:Destroy() end)
+        end
+    end,
+})
+AntiCheatTab:CreateButton({
+    Name = "Diagnose",
+    Callback = function()
+        local lines = {}
+        local remote = findVotekickRemote()
+        lines[#lines + 1] = "Remote: " .. (remote and remote:GetFullName() or "not found")
+        local pg = S.LP:FindFirstChildOfClass("PlayerGui")
+        local main = pg and pg:FindFirstChild("Main")
+        local vk = main and main:FindFirstChild("Votekick")
+        lines[#lines + 1] = "UI: " .. (vk and vk:GetFullName() or "not found")
+        if vk then
+            lines[#lines + 1] = "  Visible: " .. tostring(vk.Visible)
+            lines[#lines + 1] = "  Enabled: " .. tostring(vk.Enabled)
+        end
+        lines[#lines + 1] = "Log entries: " .. #S.Votekick.Log
+        print("[Outlaw] Votekick:\n" .. table.concat(lines, "\n"))
+        if pg then
+            local gui = Instance.new("ScreenGui")
+            gui.Name = "OutlawVKDiag"
+            gui.ResetOnSpawn = false
+            gui.Parent = pg
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(0, 520, 0, 220)
+            frame.Position = UDim2.new(0.5, -260, 0.5, -110)
+            frame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+            frame.BorderSizePixel = 0
+            frame.Parent = gui
+            Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, -20, 1, -20)
+            label.Position = UDim2.new(0, 10, 0, 10)
+            label.BackgroundTransparency = 1
+            label.TextColor3 = Color3.fromRGB(230, 230, 230)
+            label.Font = Enum.Font.Code
+            label.TextSize = 13
+            label.TextWrapped = true
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.TextYAlignment = Enum.TextYAlignment.Top
+            label.Text = table.concat(lines, "\n")
+            label.Parent = frame
+            task.delay(6, function() gui:Destroy() end)
+        end
+    end,
+})
+
+VisTab:CreateSection("Lighting")
+VisTab:CreateToggle({
+    Name = "Fullbright",
+    CurrentValue = false,
+    Flag = "Fullbright",
+    Callback = function(v) S.Visual.Fullbright = v end,
+})
+VisTab:CreateToggle({
+    Name = "Night Vision",
+    CurrentValue = false,
+    Flag = "NightVision",
+    Callback = function(v) S.Visual.NightVision = v end,
+})
+VisTab:CreateToggle({
+    Name = "No Fog",
+    CurrentValue = false,
+    Flag = "NoFog",
+    Callback = function(v) S.Visual.NoFog = v end,
+})
+
+LimbsTab:CreateSection("Legs")
+LimbsTab:CreateToggle({
+    Name = "Enlarge Legs",
+    CurrentValue = false,
+    Flag = "LegsToggle",
+    Callback = function(v) S.Limbs.Legs = v end,
+})
+LimbsTab:CreateSlider({
+    Name = "Leg Size",
+    Range = {1, 10},
+    Increment = 0.5,
+    Suffix = "x",
+    CurrentValue = 2,
+    Flag = "LegSize",
+    Callback = function(v) S.Limbs.LegSize = v end,
+})
+LimbsTab:CreateSlider({
+    Name = "Leg Opacity",
+    Range = {0, 1},
+    Increment = 0.1,
+    Suffix = "",
+    CurrentValue = 0.5,
+    Flag = "LegTrans",
+    Callback = function(v) S.Limbs.LegTrans = v end,
+})
+LimbsTab:CreateSection("Arms")
+LimbsTab:CreateToggle({
+    Name = "Enlarge Arms",
+    CurrentValue = false,
+    Flag = "ArmsToggle",
+    Callback = function(v) S.Limbs.Arms = v end,
+})
+LimbsTab:CreateSlider({
+    Name = "Arm Size",
+    Range = {1, 10},
+    Increment = 0.5,
+    Suffix = "x",
+    CurrentValue = 2,
+    Flag = "ArmSize",
+    Callback = function(v) S.Limbs.ArmSize = v end,
+})
+LimbsTab:CreateSlider({
+    Name = "Arm Opacity",
+    Range = {0, 1},
+    Increment = 0.1,
+    Suffix = "",
+    CurrentValue = 0.5,
+    Flag = "ArmTrans",
+    Callback = function(v) S.Limbs.ArmTrans = v end,
+})
+
+Window:LoadConfig()
